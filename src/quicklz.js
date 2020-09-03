@@ -1,95 +1,100 @@
-/*QuickLZ Port to Javascript*/
+import React from 'react'
 
-var QLZ = QLZ ||
-{
-	REVISION : '1'
-};
 
-(function(){
+/**
+	Modified version of https://github.com/tarelli/quicklz-js
+**/
+class QuickLZ{
 
-	// Streaming mode not supported
-	var QLZ_STREAMING_BUFFER = 0;
-	
-	// Bounds checking not supported. Use try...catch instead
-	var QLZ_MEMORY_SAFE = 0;
-	
-	var QLZ_VERSION_MAJOR = 1;
-	var QLZ_VERSION_MINOR = 5;
-	var QLZ_VERSION_REVISION = 0;
-	
-	// Decrease QLZ_POINTERS_3 to increase compression speed of level 3. Do not
-	// edit any other constants!
-	var HASH_VALUES = 4096;
-	var MINOFFSET = 2;
-	var UNCONDITIONAL_MATCHLEN = 6;
-	var UNCOMPRESSED_END = 4;
-	var CWORD_LEN = 4;
-	var DEFAULT_HEADERLEN = 9;
-	var QLZ_POINTERS_1 = 1;
-	var QLZ_POINTERS_3 = 16;
-	
-	
-	
-	QLZ.headerLen = function(source)
+	constructor(){
+		// Streaming mode not supported
+		this.QLZ_STREAMING_BUFFER = 0;
+
+		this.QLZ_MEMORY_SAFE = 0;
+
+		this.QLZ_VERSION_MAJOR = 1;
+		this.QLZ_VERSION_MINOR = 5;
+		this.QLZ_VERSION_REVISION = 0;
+
+		// Decrease QLZ_POINTERS_3 to increase compression speed of level 3. Do not
+		// edit any other constants!
+		this.HASH_VALUES = 4096;
+		this.MINOFFSET = 2;
+		this.UNCONDITIONAL_MATCHLEN = 6;
+		this.UNCOMPRESSED_END = 4;
+		this.CWORD_LEN = 4;
+		this.DEFAULT_HEADERLEN = 9;
+		this.QLZ_POINTERS_1 = 1;
+		this.QLZ_POINTERS_3 = 16;
+	}
+
+
+
+	headerLen = function(source)
 	{
 		return ((source[0] & 2) == 2) ? 9 : 3;
 	};
-	
-	
-	QLZ.sizeDecompressed = function(source)
+
+
+	sizeDecompressed = function(source)
 	{
-		if (QLZ.headerLen(source) == 9)
-			return QLZ.fast_read(source, 5, 4);
+		if (this.headerLen(source) == 9)
+			return this.fast_read(source, 5, 4);
 		else
-			return QLZ.fast_read(source, 2, 1);
+			return this.fast_read(source, 2, 1);
 	};
 
-	QLZ.sizeCompressed = function(source)
+	sizeCompressed = function(source)
 	{
-		if (QLZ.headerLen(source) == 9)
-			return QLZ.fast_read(source, 1, 4);
+		if (this.headerLen(source) == 9)
+			return this.fast_read(source, 1, 4);
 		else
-			return QLZ.fast_read(source, 1, 1);
+			return this.fast_read(source, 1, 1);
 	};
-	
 
-	QLZ.arraycopy = function (aSource, aSourceOffset = 0,  aTarget, aTargetOffset = 0, aLength = aSource.byteLength) {
+
+	arraycopy = function (aSource, aSourceOffset = 0,  aTarget, aTargetOffset = 0, aLength = aSource.byteLength) {
 	  // The rest just gets the data copied into it.
 	  let view = new Uint8Array(aTarget, aTargetOffset);
 	  view.set(new Uint8Array(aSource, aSourceOffset, aLength));
 	}
-	
-	QLZ.fast_read(a, i, numbytes)
+
+	fast_read = (a, i, numbytes) =>
 	{
 		var l = 0;
-		for (int j = 0; j < numbytes; j++)
-			l |= (((a[i + j]) & 0xffL) << j * 8);
+		for (let j = 0; j < numbytes; j++)
+			l |= (((a[i + j]) & 0xff) << j * 8);
 		return l;
 	}
-	
-	QLZ.decompress = function(source)
+
+	decompress(source, level)
 	{
-		var size = QLZ.sizeDecompressed(source);
-		var src = QLZ.headerLen(source);
+		var size = this.sizeDecompressed(source);
+		var src = this.headerLen(source);
 		var dst = 0;
 		var cword_val = 1;
-		var destination = new UInt8Array(size);
+		var destination = new Uint8Array(size);
 		var hashtable = new Int32Array(4096);
-		var hash_counter = new UInt8Array(4096);
-		var last_matchstart = size - UNCONDITIONAL_MATCHLEN - UNCOMPRESSED_END - 1;
+		var hash_counter = new Uint8Array(4096);
+		var last_matchstart = size - this.UNCONDITIONAL_MATCHLEN - this.UNCOMPRESSED_END - 1;
 		var last_hashed = -1;
 		var hash;
 		var fetch = 0;
 
-		var level = (source[0] >>> 2) & 0x3;
+		if(!level){
+			var lvl = (source[0] >>> 2) & 0x3;
+			if (lvl != 1 && lvl != 3){
+				throw new Error("Javascript version only supports level 1 and 3");
+			}
+			level = lvl;
+			//level = 1;//don't ask. it works ¯\_(ツ)_/¯
 
-		if (level != 1 && level != 3)
-			throw new Error("Javascript version only supports level 1 and 3");
+		}
 
 		if ((source[0] & 1) != 1)
 		{
-			var d2 = new UInt8Array(size);
-			QLZ.arraycopy(source, headerLen(source), d2, 0, size);
+			var d2 = new Uint8Array(size);
+			this.arraycopy(source, this.headerLen(source), d2, 0, size);
 			return d2;
 		}
 
@@ -97,14 +102,14 @@ var QLZ = QLZ ||
 		{
 			if (cword_val == 1)
 			{
-				cword_val = QLZ.fast_read(source, src, 4);
+				cword_val = this.fast_read(source, src, 4);
 				src += 4;
 				if (dst <= last_matchstart)
 				{
 					if(level == 1)
-						fetch = QLZ.fast_read(source, src, 3);
+						fetch = this.fast_read(source, src, 3);
 					else
-						fetch = QLZ.fast_read(source, src, 4);
+						fetch = this.fast_read(source, src, 4);
 				}
 			}
 
@@ -127,7 +132,7 @@ var QLZ = QLZ ||
 					}
 					else
 					{
-						matchlen = ((int)source[src + 2]) & 0xff;
+						matchlen = (Number(source[src + 2])) & 0xff;
 						src += 3;
 					}
 				}
@@ -165,7 +170,7 @@ var QLZ = QLZ ||
 						matchlen = ((fetch >>> 7) & 255) + 3;
 						src += 4;
 					}
-					offset2 = (int)(dst - offset);
+					offset2 = Number(dst - offset);
 				}
 
 				destination[dst + 0] = destination[offset2 + 0];
@@ -180,20 +185,20 @@ var QLZ = QLZ ||
 
 				if (level == 1)
 				{
-					fetch = QLZ.fast_read(destination, last_hashed + 1, 3); // destination[last_hashed + 1] | (destination[last_hashed + 2] << 8) | (destination[last_hashed + 3] << 16);
+					fetch = this.fast_read(destination, last_hashed + 1, 3); // destination[last_hashed + 1] | (destination[last_hashed + 2] << 8) | (destination[last_hashed + 3] << 16);
 					while (last_hashed < dst - matchlen)
 					{
 						last_hashed++;
-						hash = ((fetch >>> 12) ^ fetch) & (HASH_VALUES - 1);
+						hash = ((fetch >>> 12) ^ fetch) & (this.HASH_VALUES - 1);
 						hashtable[hash] = last_hashed;
 						hash_counter[hash] = 1;
-						fetch = fetch >>> 8 & 0xffff | (((int)destination[last_hashed + 3]) & 0xff) << 16;
+						fetch = fetch >>> 8 & 0xffff | ((Number(destination[last_hashed + 3])) & 0xff) << 16;
 					}
-					fetch = QLZ.fast_read(source, src, 3);
+					fetch = this.fast_read(source, src, 3);
 				}
 				else
 				{
-					fetch = QLZ.fast_read(source, src, 4);
+					fetch = this.fast_read(source, src, 4);
 				}
 				last_hashed = dst - 1;
 			}
@@ -211,16 +216,16 @@ var QLZ = QLZ ||
 						while (last_hashed < dst - 3)
 						{
 							last_hashed++;
-							int fetch2 = QLZ.fast_read(destination, last_hashed, 3);
-							hash = ((fetch2 >>> 12) ^ fetch2) & (HASH_VALUES - 1);
+							let fetch2 = this.fast_read(destination, last_hashed, 3);
+							hash = ((fetch2 >>> 12) ^ fetch2) & (this.HASH_VALUES - 1);
 							hashtable[hash] = last_hashed;
 							hash_counter[hash] = 1;
 						}
-						fetch = fetch >> 8 & 0xffff | (((int)source[src + 2]) & 0xff) << 16;
+						fetch = fetch >> 8 & 0xffff | ((Number(source[src + 2])) & 0xff) << 16;
 					}
 					else
 					{
-						fetch = fetch >> 8 & 0xffff | (((int)source[src + 2]) & 0xff) << 16 | (((int)source[src + 3]) & 0xff) << 24;
+						fetch = fetch >> 8 & 0xffff | ((Number(source[src + 2])) & 0xff) << 16 | ((Number(source[src + 3])) & 0xff) << 24;
 					}
 				}
 				else
@@ -229,8 +234,8 @@ var QLZ = QLZ ||
 					{
 						if (cword_val == 1)
 						{
-							src += CWORD_LEN;
-							cword_val = 0x80000000L;
+							src += this.CWORD_LEN;
+							cword_val = 0x80000000;
 						}
 
 						destination[dst] = source[src];
@@ -243,9 +248,5 @@ var QLZ = QLZ ||
 			}
 		}
 	}
-	
-	
-	
-	
-	
-	
+}
+export default QuickLZ;
