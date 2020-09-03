@@ -1,5 +1,3 @@
-import React from 'react'
-
 
 /**
 	Modified version of https://github.com/tarelli/quicklz-js
