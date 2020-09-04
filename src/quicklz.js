@@ -28,13 +28,13 @@ class QuickLZ{
 
 
 
-	headerLen = function(source)
+	headerLen(source)
 	{
 		return ((source[0] & 2) == 2) ? 9 : 3;
 	};
 
 
-	sizeDecompressed = function(source)
+	sizeDecompressed(source)
 	{
 		if (this.headerLen(source) == 9)
 			return this.fast_read(source, 5, 4);
@@ -42,7 +42,7 @@ class QuickLZ{
 			return this.fast_read(source, 2, 1);
 	};
 
-	sizeCompressed = function(source)
+	sizeCompressed(source)
 	{
 		if (this.headerLen(source) == 9)
 			return this.fast_read(source, 1, 4);
@@ -50,14 +50,29 @@ class QuickLZ{
 			return this.fast_read(source, 1, 1);
 	};
 
+	write_header(dst, level, compressible, size_compressed, size_decompressed)
+    {
+        dst[0] = (2 | (compressible ? 1 : 0));
+        dst[0] |= (level << 2);
+        dst[0] |= (1 << 6);
+        dst[0] |= (0 << 4);
+        this.fast_write(dst, 1, size_decompressed, 4);
+        this.fast_write(dst, 5, size_compressed, 4);
+    }
 
-	arraycopy = function (aSource, aSourceOffset = 0,  aTarget, aTargetOffset = 0, aLength = aSource.byteLength) {
+	 fast_write(a, i, value, numbytes)
+    {
+        for (let j = 0; j < numbytes; j++)
+	        a[i + j] = (value >> (j * 8));
+    }
+
+	arraycopy(aSource, aSourceOffset = 0,  aTarget, aTargetOffset = 0, aLength = aSource.length) {
 	  // The rest just gets the data copied into it.
 	  let view = new Uint8Array(aTarget, aTargetOffset);
 	  view.set(new Uint8Array(aSource, aSourceOffset, aLength));
 	}
 
-	fast_read = (a, i, numbytes) =>
+	fast_read(a, i, numbytes)
 	{
 		var l = 0;
 		for (let j = 0; j < numbytes; j++)

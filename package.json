@@ -1,0 +1,22 @@
+{
+  "name": "quicklz",
+  "version": "1.0.1",
+  "description": "Javascript package for QuickLZ compression.",
+  "main": "src/quicklz.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yuukij/quicklz-js.git"
+  },
+  "keywords": [
+    "QuickLZ"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/yuukij/quicklz-js/issues"
+  },
+  "homepage": "https://github.com/yuukij/quicklz-js#readme"
+}
